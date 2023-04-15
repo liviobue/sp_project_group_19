@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # Step 1: API key and endpoint
 api_key = 'HN5ZKE3677Q1PMJM'
-url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=CS&apikey={api_key}'
+url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=TSLA&apikey={api_key}'
 
 # Step 2: Retrieve data from API and convert to DataFrame
 response = requests.get(url)
@@ -35,18 +35,19 @@ sp500_prices.reverse()
 sp500_df = pd.DataFrame(sp500_prices, columns=['date', 'sp500_close'])
 merged_df = pd.merge(df, sp500_df, on='date')
 corr = merged_df['return'].corr(merged_df['sp500_close'])
-print(f"The correlation between Credit Suisse and the S&P 500 is {corr:.2f}.")
-
+print(f"The correlation between Tesla and the S&P 500 is {corr:.2f}.")
 
 # Step 5: Flask app
 @app.route('/')
 def index():
-    # generate plot
+# generate plot
     img = BytesIO()
+    plt.figure(figsize=(13, 6))  # set the figure size to 12 inches (width) by 6 inches (height)
     plt.plot(df['date'], df['close'])
-    plt.title('Credit Suisse Stock Price')
+    plt.title('Tesla Stock Price')
     plt.xlabel('Date')
-    plt.ylabel('Closing Price (CHF)')
+    plt.ylabel('Closing Price ($)')
+    plt.xticks(df['date'][::10]) # set x ticks to show every 10th date
     plt.savefig(img, format='png')
     plt.close()
     img.seek(0)

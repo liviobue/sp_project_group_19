@@ -1,0 +1,31 @@
+version: '3'
+services:
+  db:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: test123
+      MYSQL_DATABASE: tesla_stock_price
+      MYSQL_USER: tesla
+      MYSQL_PASSWORD: test123
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+  web:
+    build: .
+    command: >
+      bash -c "
+        pip install --upgrade pip &&
+        pip install -r /app/requirements.txt &&
+        python app.py
+      "
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    volumes:
+      - ./:/app
+      - ./requirements.txt:/app/requirements.txt
+volumes:
+  db_data:
