@@ -3,3 +3,8 @@ pandas
 requests
 matplotlib
 numpy
+sqlalchemy
+pymysql
+cryptography
+yfinance
+requests

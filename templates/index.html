@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Tesla</title>
+    <title>Choose Stock</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 </head>
+
 <body>
-    <h1>Tesla</h1>
-    <p>The correlation between Tesla and the S&P 500 is {{ corr }}.</p>
-    <img src="data:image/png;base64,{{ plot_url }}" alt="Credit Suisse Stock Price">
+    <div class="container mt-5">
+        <h1>Enter Stock Symbol</h1>
+        <form method="POST" action="{{ url_for('stock_info') }}">
+            <div class="form-group">
+                <label for="symbol">Symbol:</label>
+                <input type="text" class="form-control" name="symbol" id="symbol" placeholder="Enter stock symbol...">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
 </body>
+
 </html>

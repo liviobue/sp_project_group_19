@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Error</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="mt-5">Error</h1>
+        <p class="lead">Sorry, {{ symbol }} is not a valid stock ticker.</p>
+        <p class="lead">Please check that you entered a valid stock symbol.</p>
+        <p><a href="/" class="btn btn-primary">Return to Home Page</a></p>
+        {% if error %}
+        <p>Error message: {{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+
+</html>

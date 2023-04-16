@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ stock_name }} Stock Analysis</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+
+<body class="container my-3">
+
+    <h1 class="text-center mb-3">Stock information for {{ stock_name }}</h1>
+    <p class="mb-3">Return to <a href="/">Home Page</a> and enter another stock.</p>
+    <p class="mb-3">The correlation between {{ stock_name }} and the S&P 500 is {{ corr }}.</p>
+
+    <img class="img-fluid" src="data:image/png;base64,{{ plot_url }}" alt="{{ stock_name }} Stock Price">
+
+    <h1 class="text-center my-3">{{ stock_name }} Stock Price</h1>
+    <table class="table table-striped table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Date</th>
+                <th>Open</th>
+                <th>High</th>
+                <th>Low</th>
+                <th>Close</th>
+                <th>Volume</th>
+                <th>Dividend</th>
+                <th>Split Coeff</th>
+                <th>Return</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for index, row in table.iterrows() %}
+            <tr>
+                <td>{{ row.iloc[1] }}</td>
+                <td>{{ row.iloc[2] }}</td>
+                <td>{{ row.iloc[3] }}</td>
+                <td>{{ row.iloc[4] }}</td>
+                <td>{{ row.iloc[5] }}</td>
+                <td>{{ row.iloc[6] }}</td>
+                <td>{{ row.iloc[7] }}</td>
+                <td>{{ row.iloc[8] }}</td>
+                <td>{{ row.iloc[9] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+  </body>
+  </html>

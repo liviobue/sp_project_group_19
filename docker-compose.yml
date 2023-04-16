@@ -6,8 +6,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: test123
       MYSQL_DATABASE: tesla_stock_price
-      MYSQL_USER: tesla
-      MYSQL_PASSWORD: test123
     ports:
       - "3306:3306"
     volumes:
