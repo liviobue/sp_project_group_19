@@ -70,8 +70,9 @@ def get_stock_data(symbol):
     df = pd.read_sql_query(query, engine)
 
     # Step 3: Calculate daily return
-    df['return'] = df['close'].pct_change().apply(
-        lambda x: "{:.3f} %".format(x*100))
+    df['return'] = df['close'].sort_index(ascending=False).pct_change().apply(
+    lambda x: "{:.3f} %".format(x*100))
+        
     return (df)
 
 
