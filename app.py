@@ -16,7 +16,6 @@ app = Flask(__name__)
 # Step 1: API key and endpoint
 api_key = 'HN5ZKE3677Q1PMJM'
 
-
 def get_stock_data(symbol):
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&apikey={api_key}'
 
@@ -137,7 +136,6 @@ def stock_info():
         # set no_cache to True to prevent caching of the error page
         resp.cache_control.no_cache = True
         return resp
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
