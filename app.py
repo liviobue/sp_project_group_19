@@ -10,11 +10,13 @@ import time
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import requests
+import folium
 
 app = Flask(__name__)
 
 # Step 1: API key and endpoint
 api_key = 'HN5ZKE3677Q1PMJM'
+
 
 def get_stock_data(symbol):
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&apikey={api_key}'
@@ -71,8 +73,8 @@ def get_stock_data(symbol):
 
     # Step 3: Calculate daily return
     df['return'] = df['close'].sort_index(ascending=False).pct_change().apply(
-    lambda x: "{:.3f} %".format(x*100))
-        
+        lambda x: "{:.3f} %".format(x*100))
+
     return (df)
 
 
@@ -92,12 +94,32 @@ def calc_corr_sp500(df):
     print(f"The correlation between Tesla and the S&P 500 is {corr:.2f}.")
     return corr
 
+
 def get_stock_name(symbol):
     url = f"https://finance.yahoo.com/quote/{symbol}"
     response = requests.get(url)
     start = response.text.find('<title>') + len('<title>')
     end = response.text.find('(', start)
     return response.text[start:end].strip()
+
+
+def createMap(symbol):
+    url = f'https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}&apikey={api_key}'
+    # Step 2: Retrieve data from API and get address
+    response = requests.get(url)
+    data = response.json()
+    address = data['Address']
+    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(address)
+    response = requests.get(url).json()
+    if response:
+        lat = response[0]["lat"]
+        lng = response[0]["lon"]
+        # Step 4: Plot location on map
+        m = folium.Map(location=[lat, lng], zoom_start=10)
+        folium.Marker([lat, lng]).add_to(m)
+        return m._repr_html_()
+    else:
+        return "No infomation found"
 
 # Step 5: Flask app
 
@@ -128,15 +150,17 @@ def stock_info():
         plt.close()
         img.seek(0)
         plot_url = base64.b64encode(img.getvalue()).decode()
+        map_html = createMap(symbol)
 
         # render template
-        return render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name)
+        return render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name, map_html=map_html)
     except Exception as e:
         resp = make_response(render_template(
             'error.html', symbol=symbol, error=str(e)))
         # set no_cache to True to prevent caching of the error page
         resp.cache_control.no_cache = True
         return resp
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)

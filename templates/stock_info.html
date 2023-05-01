@@ -22,6 +22,9 @@
 
     <img class="img-fluid" src="data:image/png;base64,{{ plot_url }}" alt="{{ stock_name }} Stock Price">
 
+    <h1 class="text-center my-3">Map</h1>
+    <div id="map">{{ map_html|safe }}</div>
+
     <h1 class="text-center my-3">{{ stock_name }} Stock Price</h1>
     <table class="table table-striped table-hover">
         <thead class="thead-dark">
