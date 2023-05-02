@@ -11,11 +11,20 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import requests
 import folium
+from datetime import date
 
 app = Flask(__name__)
 
 # Step 1: API key and endpoint
 api_key = 'HN5ZKE3677Q1PMJM'
+
+# Define connection
+db_user = 'root'
+db_password = 'test123'
+db_host = 'db'
+db_port = '3306'
+db_name = 'tesla_stock_price'
+db_connection = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
 
 
 def get_stock_data(symbol):
@@ -24,14 +33,6 @@ def get_stock_data(symbol):
     # Step 2: Retrieve data from API and convert to DataFrame
     response = requests.get(url)
     data = json.loads(response.text)
-
-    # Define connection
-    db_user = 'root'
-    db_password = 'test123'
-    db_host = 'db'
-    db_port = '3306'
-    db_name = 'tesla_stock_price'
-    db_connection = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
 
     # Connect to the database
     engine = create_engine(db_connection, echo=True)
@@ -67,14 +68,17 @@ def get_stock_data(symbol):
 
     print("Successfully inserted data")
 
-    # Execute the query
-    query = f'SELECT * FROM {table_name}'
-    df = pd.read_sql_query(query, engine)
 
+def get_stock_data_for_page(start_date, end_date, symbol):
+    table_name = f"{symbol}_daily_prices"
+    engine = create_engine(db_connection, echo=True)
+    connection = engine.connect()
+    # Execute the query
+    query = f"SELECT * FROM {table_name} WHERE date BETWEEN '{start_date}' AND '{end_date}'"
+    df = pd.read_sql_query(query, engine)
     # Step 3: Calculate daily return
     df['return'] = df['close'].sort_index(ascending=False).pct_change().apply(
         lambda x: "{:.3f} %".format(x*100))
-
     return (df)
 
 
@@ -109,7 +113,8 @@ def createMap(symbol):
     response = requests.get(url)
     data = response.json()
     address = data['Address']
-    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(address)
+    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(
+        address)
     response = requests.get(url).json()
     if response:
         lat = response[0]["lat"]
@@ -126,14 +131,25 @@ def createMap(symbol):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    today = date.today()
+    return render_template('index.html', date=date)
 
 
 @app.route('/stock_info', methods=['POST'])
 def stock_info():
     symbol = request.form['symbol'].upper()
+    start_date = request.form.get('start_date')
+    end_date = request.form.get('end_date')
     try:
-        df = get_stock_data(symbol)
+        get_stock_data(symbol)
+        df = get_stock_data_for_page(start_date, end_date, symbol)
+
+        if df.empty:
+            resp = make_response(render_template(
+                'error.html', symbol=symbol, error="No stock information for this time period"))
+            resp.cache_control.no_cache = True
+            return resp
+
         corr = calc_corr_sp500(df)
         stock_name = get_stock_name(symbol)
 
@@ -142,7 +158,7 @@ def stock_info():
         # set the figure size to 12 inches (width) by 6 inches (height)
         plt.figure(figsize=(13, 6))
         plt.plot(df['date'], df['close'])
-        plt.title(f"{stock_name} Stock Price")
+        plt.title(f"{stock_name} Stock Price between {start_date} and {end_date}")
         plt.xlabel('Date')
         plt.ylabel('Closing Price ($)')
         plt.xticks(df['date'][::10])  # set x ticks to show every 10th date
@@ -157,7 +173,6 @@ def stock_info():
     except Exception as e:
         resp = make_response(render_template(
             'error.html', symbol=symbol, error=str(e)))
-        # set no_cache to True to prevent caching of the error page
         resp.cache_control.no_cache = True
         return resp
 

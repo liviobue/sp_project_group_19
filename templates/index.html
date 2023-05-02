@@ -20,11 +20,35 @@
         <form method="POST" action="{{ url_for('stock_info') }}">
             <div class="form-group">
                 <label for="symbol">Symbol:</label>
-                <input type="text" class="form-control" name="symbol" id="symbol" placeholder="e. g. TSLA, NVDA..." required>
+                <input type="text" class="form-control" name="symbol" id="symbol" placeholder="e.g. TSLA, NVDA..."
+                    required>
             </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
+            <div class="form-group">
+                <label for="start_date">Start Date:</label>
+                <input type="date" class="form-control" name="start_date" id="start_date" required
+                    max="{{ date.today().strftime('%Y-%m-%d') }}">
+            </div>
+            <div class="form-group">
+                <label for="end_date">End Date:</label>
+                <input type="date" class="form-control" name="end_date" id="end_date" required
+                    max="{{ date.today().strftime('%Y-%m-%d') }}">
+            </div>
+            <button type="submit" class="btn btn-primary" onclick="return validateDates()">Submit</button>
         </form>
-    </div>    
+    </div>
+
+    <script>
+        function validateDates() {
+            var startDate = new Date(document.getElementById("start_date").value);
+            var endDate = new Date(document.getElementById("end_date").value);
+            if (startDate > endDate) {
+                alert("End date must be after start date.");
+                return false;
+            }
+            return true;
+        }
+    </script>
+
 </body>
 
 </html>
