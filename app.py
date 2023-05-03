@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 import requests
 import folium
 from datetime import date
+import pdfkit
 
 app = Flask(__name__)
 
@@ -29,15 +30,12 @@ db_connection = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{d
 
 def get_stock_data(symbol):
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&apikey={api_key}'
-
     # Step 2: Retrieve data from API and convert to DataFrame
     response = requests.get(url)
     data = json.loads(response.text)
-
     # Connect to the database
     engine = create_engine(db_connection, echo=True)
     connection = engine.connect()
-
     # Create table if it doesn't exist
     table_name = f"{symbol}_daily_prices"
     create_table_query = text(f"""
@@ -65,7 +63,6 @@ def get_stock_data(symbol):
                                           'low': values['3. low'], 'close': values['4. close'], 'volume': values['6. volume']})
     # Commit changes
     connection.commit()
-
     print("Successfully inserted data")
 
 
@@ -76,13 +73,14 @@ def get_stock_data_for_page(start_date, end_date, symbol):
     # Execute the query
     query = f"SELECT * FROM {table_name} WHERE date BETWEEN '{start_date}' AND '{end_date}'"
     df = pd.read_sql_query(query, engine)
+    df.drop_duplicates(subset=['date'], inplace=True)
     # Step 3: Calculate daily return
     df['return'] = df['close'].sort_index(ascending=False).pct_change().apply(
         lambda x: "{:.3f} %".format(x*100))
     return (df)
 
 
-def calc_corr_sp500(df):
+def calc_corr_sp500(df, stock_name):
     # Step 4: Calculate correlation with S&P 500
     sp500_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&apikey={api_key}'
     sp500_response = requests.get(sp500_url)
@@ -95,7 +93,6 @@ def calc_corr_sp500(df):
     sp500_df = pd.DataFrame(sp500_prices, columns=['date', 'sp500_close'])
     merged_df = pd.merge(df, sp500_df, on='date')
     corr = merged_df['return'].corr(merged_df['sp500_close'])
-    print(f"The correlation between Tesla and the S&P 500 is {corr:.2f}.")
     return corr
 
 
@@ -113,8 +110,7 @@ def createMap(symbol):
     response = requests.get(url)
     data = response.json()
     address = data['Address']
-    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(
-        address)
+    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(address)
     response = requests.get(url).json()
     if response:
         lat = response[0]["lat"]
@@ -125,6 +121,35 @@ def createMap(symbol):
         return m._repr_html_()
     else:
         return "No infomation found"
+
+
+def createPlot(df, start_date, end_date, stock_name):
+    # generate plot
+    img = BytesIO()
+    # set the figure size to 12 inches (width) by 6 inches (height)
+    plt.figure(figsize=(13, 6))
+    plt.plot(df['date'], df['close'])
+    plt.title(f"{stock_name} Stock Price between {start_date} and {end_date}")
+    plt.xlabel('Date')
+    plt.ylabel('Closing Price ($)')
+    plt.xticks(df['date'])  # set x ticks to show every 10th date
+    plt.savefig(img, format='png')
+    plt.close()
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode()
+    return plot_url
+
+
+def export_pdf(corr, plot_url, df, pd, stock_name, map_html):
+    # Get the rendered HTML
+    rendered_html = render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name, map_html=map_html)
+
+    # Create PDF from rendered HTML
+    pdf = pdfkit.from_string(rendered_html, False)
+
+    # Return the response
+    return pdf
+
 
 # Step 5: Flask app
 
@@ -141,35 +166,21 @@ def stock_info():
     start_date = request.form.get('start_date')
     end_date = request.form.get('end_date')
     try:
+        stock_name = get_stock_name(symbol)
         get_stock_data(symbol)
         df = get_stock_data_for_page(start_date, end_date, symbol)
-
         if df.empty:
             resp = make_response(render_template(
                 'error.html', symbol=symbol, error="No stock information for this time period"))
             resp.cache_control.no_cache = True
             return resp
-
-        corr = calc_corr_sp500(df)
-        stock_name = get_stock_name(symbol)
-
-        # generate plot
-        img = BytesIO()
-        # set the figure size to 12 inches (width) by 6 inches (height)
-        plt.figure(figsize=(13, 6))
-        plt.plot(df['date'], df['close'])
-        plt.title(f"{stock_name} Stock Price between {start_date} and {end_date}")
-        plt.xlabel('Date')
-        plt.ylabel('Closing Price ($)')
-        plt.xticks(df['date'][::10])  # set x ticks to show every 10th date
-        plt.savefig(img, format='png')
-        plt.close()
-        img.seek(0)
-        plot_url = base64.b64encode(img.getvalue()).decode()
+        corr = calc_corr_sp500(df, stock_name)
+        plot_url = createPlot(df, start_date, end_date, stock_name)
         map_html = createMap(symbol)
-
+        pdf_data = export_pdf(corr, plot_url, df, pd, stock_name, map_html)
+        pdf_data_base64 = base64.b64encode(pdf_data).decode('utf-8')
         # render template
-        return render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name, map_html=map_html)
+        return render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name, map_html=map_html, pdf_data=pdf_data_base64)
     except Exception as e:
         resp = make_response(render_template(
             'error.html', symbol=symbol, error=str(e)))

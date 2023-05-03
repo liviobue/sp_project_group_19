@@ -9,3 +9,4 @@ cryptography
 yfinance
 requests
 folium
+pdfkit

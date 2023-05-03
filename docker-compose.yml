@@ -16,6 +16,8 @@ services:
       bash -c "
         pip install --upgrade pip &&
         pip install -r /app/requirements.txt &&
+        apt update -y &&
+        apt install wkhtmltopdf -y &&
         python app.py
       "
     ports:
