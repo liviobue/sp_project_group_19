@@ -12,6 +12,14 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <style>
+        #plot {
+            width: 100%;
+            height: 100%;
+            margin: auto;
+        }
+    </style>
 </head>
 
 <body class="container my-3">
@@ -23,11 +31,24 @@
             <button type="submit" class="btn btn-primary">PDF Export</button>
         </a>
     </div>
+    <div>
+        <p class="mb-3">Return to <a href="/">Home Page</a> and enter another stock.</p>
+        <h4>Correlation with S&P 500</h4>
+        <p class="mb-3">The correlation between {{ stock_name }} and the S&P 500 is {{ corr }}.</p>
 
-    <p class="mb-3">Return to <a href="/">Home Page</a> and enter another stock.</p>
-    <p class="mb-3">The correlation between {{ stock_name }} and the S&P 500 is {{ corr }}.</p>
+        <h4>Normality Tests</h4>
+        <p class="mb-3">{{ normality_test_result }}</p>
 
-    <img class="img-fluid" src="data:image/png;base64,{{ plot_url }}" alt="{{ stock_name }} Stock Price">
+        <h4>Stationarity Test</h4>
+        <p class="mb-3">{{ stationarity_test_result }}</p>
+
+        <h4>Granger Causality Test</h4>
+        <p class="mb-3">{{ granger_causality_test_result }}</p>
+
+    </div>
+    <div id="plot">
+        {{ plots|safe }}
+    </div>
 
     <h1 class="text-center my-3">Map</h1>
     <div id="map">{{ map_html|safe }}</div>

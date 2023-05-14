@@ -13,6 +13,14 @@ import requests
 import folium
 from datetime import date
 import pdfkit
+import yfinance as yf
+from scipy.stats import normaltest
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import grangercausalitytests
+from statsmodels.graphics.tsaplots import plot_acf
+import seaborn as sns
+import mpld3
+from mpld3 import plugins
 
 app = Flask(__name__)
 
@@ -80,7 +88,7 @@ def get_stock_data_for_page(start_date, end_date, symbol):
     return (df)
 
 
-def calc_corr_sp500(df, stock_name):
+def calc_corr_sp500(df):
     # Step 4: Calculate correlation with S&P 500
     sp500_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&apikey={api_key}'
     sp500_response = requests.get(sp500_url)
@@ -110,7 +118,8 @@ def createMap(symbol):
     response = requests.get(url)
     data = response.json()
     address = data['Address']
-    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(address)
+    url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(
+        address)
     response = requests.get(url).json()
     if response:
         lat = response[0]["lat"]
@@ -123,7 +132,7 @@ def createMap(symbol):
         return "No infomation found"
 
 
-def createPlot(df, start_date, end_date, stock_name):
+def stock_chart(df, start_date, end_date, stock_name):
     # generate plot
     img = BytesIO()
     # set the figure size to 12 inches (width) by 6 inches (height)
@@ -140,9 +149,11 @@ def createPlot(df, start_date, end_date, stock_name):
     return plot_url
 
 
-def export_pdf(corr, plot_url, df, pd, stock_name, map_html):
+def export_pdf(corr, plots, df, pd, stock_name, map_html, autocorr_test_plot,
+                              granger_causality_test_result, stationarity_test_result, normality_test_result):
     # Get the rendered HTML
-    rendered_html = render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name, map_html=map_html)
+    rendered_html = render_template('stock_info.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result,
+                                    stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result)
 
     # Create PDF from rendered HTML
     pdf = pdfkit.from_string(rendered_html, False)
@@ -150,6 +161,120 @@ def export_pdf(corr, plot_url, df, pd, stock_name, map_html):
     # Return the response
     return pdf
 
+
+def normality_test(df):
+    stat, p = normaltest(df['close'])
+    print(f'Statistics={stat:.3f}, p={p:.3f}')
+    alpha = 0.05
+    if p > alpha:
+        return ('Stock Data looks Gaussian (fail to reject H0)')
+    else:
+        return ('Stock Data does not look Gaussian (reject H0)')
+
+
+def stationarity_test(df):
+    result = adfuller(df['close'])
+    print(f'ADF Statistic: {result[0]}')
+    print(f'p-value: {result[1]}')
+    print('Critical Values:')
+    for key, value in result[4].items():
+        print(f'   {key}: {value}')
+    if result[1] > 0.05:
+        return ('Fail to reject the null hypothesis (H0), data has a unit root and is non-stationary')
+    else:
+        return ('Reject the null hypothesis (H0), data does not have a unit root and is stationary')
+
+
+def granger_causality_test(df):
+    maxlag = 7
+    results = []
+    try:
+        for lag in range(1, maxlag+1):
+            granger_test = grangercausalitytests(
+                df[['close', 'volume']], maxlag=lag, verbose=False)
+            p_values = [round(granger_test[i+1][0]['ssr_ftest'][1], 4)
+                        for i in range(lag)]
+            results.append({'max_lag': lag, 'p_values': p_values})
+    except Exception as e:
+        return f"An error occurred: {e}"
+    return results
+
+
+def autocorr_test(df):
+    img = BytesIO()
+    lag = 20
+    try:
+        fig, ax = plt.subplots(figsize=(13, 6))
+        plot_acf(df['close'], lags=lag, ax=ax)
+        plt.savefig(img, format='png')
+        plt.close()
+        img.seek(0)
+        plot_url = base64.b64encode(img.getvalue()).decode()
+        return plot_url
+    except ValueError:
+        return "Error: dataframe too short for desired lag"
+
+
+def moving_average_chart(df):
+    img = BytesIO()
+    column = 'close'
+    window_size = 20
+    rolling_mean = df[column].rolling(window=window_size).mean()
+    fig, ax = plt.subplots(figsize=(13, 6))
+    ax.plot(df.index, df[column], label='Actual Price')
+    ax.plot(rolling_mean.index, rolling_mean,
+            label=f'{window_size}-day Moving Average')
+    ax.legend(loc='upper left')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Price')
+    ax.set_title(f'{column} Moving Average Chart')
+    plt.xticks(rotation=45)
+    plt.savefig(img, format='png')
+    plt.close()
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode()
+    return plot_url
+
+
+def heatmap(df):
+    # remove percentage sign from column 'change'
+    df['return'] = df['return'].str.replace('%', '').astype(float)
+
+    img = BytesIO()
+    corr_method = 'pearson'
+    cmap = 'coolwarm'
+    corr_matrix = df.drop(columns=['date']).corr(method=corr_method)
+    fig, ax = plt.subplots(figsize=(13, 6))
+    sns.heatmap(corr_matrix, cmap=cmap, annot=True, annot_kws={'size': 12})
+    ax.set_title('Correlation Heatmap')
+    plt.savefig(img, format='png')
+    plt.close()
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode()
+    return plot_url
+
+
+def create_subplot(stock_plot, autocorr_test_plot, moving_average_chart_plot, heatmap_plot):
+    # create a figure with four subplots
+    fig, axs = plt.subplots(2, 2, figsize=(11, 6))
+    axs[0, 0].imshow(plt.imread(BytesIO(base64.b64decode(stock_plot))))
+    axs[0, 1].imshow(plt.imread(BytesIO(base64.b64decode(autocorr_test_plot))))
+    axs[1, 0].imshow(plt.imread(
+        BytesIO(base64.b64decode(moving_average_chart_plot))))
+    axs[1, 1].imshow(plt.imread(BytesIO(base64.b64decode(heatmap_plot))))
+    # remove the x and y axis labels and ticks from each subplot
+    for ax in axs.flat:
+        ax.set(xticks=[], yticks=[], xlabel='', ylabel='')
+    # add titles to each subplot
+    axs[0, 0].set_title('Stock Chart')
+    axs[0, 1].set_title('Autocorrelation Test Plot')
+    axs[1, 0].set_title('Moving Average Chart')
+    axs[1, 1].set_title('Correlation Heatmap')
+    # adjust the space between subplots and add padding
+    # create an interactive plot with zoom and pan functionality
+    plugins.connect(fig, plugins.MousePosition(fontsize=14))
+    # encode the plot as a base64 string and return it
+    return mpld3.fig_to_html(fig)
 
 # Step 5: Flask app
 
@@ -174,13 +299,26 @@ def stock_info():
                 'error.html', symbol=symbol, error="No stock information for this time period"))
             resp.cache_control.no_cache = True
             return resp
-        corr = calc_corr_sp500(df, stock_name)
-        plot_url = createPlot(df, start_date, end_date, stock_name)
+        corr = calc_corr_sp500(df)
         map_html = createMap(symbol)
-        pdf_data = export_pdf(corr, plot_url, df, pd, stock_name, map_html)
+        normality_test_result = normality_test(df)
+        stationarity_test_result = stationarity_test(df)
+        granger_causality_test_result = granger_causality_test(df)
+
+        stock_plot = stock_chart(df, start_date, end_date, stock_name)
+        autocorr_test_plot = autocorr_test(df)
+        moving_average_chart_plot = moving_average_chart(df)
+        heatmap_plot = heatmap(df)
+
+        plots = create_subplot(
+            stock_plot, autocorr_test_plot, moving_average_chart_plot, heatmap_plot)
+
+        # Create PDF
+        pdf_data = export_pdf(corr, plots, df, pd, stock_name, map_html, autocorr_test_plot,
+                              granger_causality_test_result, stationarity_test_result, normality_test_result)
         pdf_data_base64 = base64.b64encode(pdf_data).decode('utf-8')
         # render template
-        return render_template('stock_info.html', corr=corr, plot_url=plot_url, table=df, pd=pd, stock_name=stock_name, map_html=map_html, pdf_data=pdf_data_base64)
+        return render_template('stock_info.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result, stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result, pdf_data=pdf_data_base64)
     except Exception as e:
         resp = make_response(render_template(
             'error.html', symbol=symbol, error=str(e)))

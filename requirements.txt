@@ -10,3 +10,8 @@ yfinance
 requests
 folium
 pdfkit
+yfinance
+scipy
+statsmodels
+seaborn
+mpld3
