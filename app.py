@@ -166,11 +166,11 @@ def stock_chart(df, start_date, end_date, stock_name):
     return plot_url
 
 
-def export_pdf(corr, plots, df, pd, stock_name, map_html, autocorr_test_plot,
+def export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
                               granger_causality_test_result, stationarity_test_result, normality_test_result):
     # Get the rendered HTML
     rendered_html = render_template('stock_info.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result,
-                                    stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result)
+                                    stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, normality_test_result=normality_test_result)
 
     # Create PDF from rendered HTML
     pdf = pdfkit.from_string(rendered_html, False)
@@ -332,7 +332,7 @@ def stock_info():
             stock_plot, autocorr_test_plot, moving_average_chart_plot, heatmap_plot)
 
         # Create PDF
-        pdf_data = export_pdf(corr, plots, df, pd, stock_name, map_html, autocorr_test_plot,
+        pdf_data = export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
                               granger_causality_test_result, stationarity_test_result, normality_test_result)
         pdf_data_base64 = base64.b64encode(pdf_data).decode('utf-8')
         # render template
