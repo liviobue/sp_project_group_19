@@ -89,6 +89,7 @@ def get_stock_data_for_page(start_date, end_date, symbol):
     # Step 3: Calculate daily return
     df['return'] = df['close'].sort_index(ascending=False).pct_change().apply(
         lambda x: "{:.3f} %".format(x*100))
+    df.drop(columns=['dividend', 'split_coeff'])
     return (df)
 
 
