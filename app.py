@@ -22,6 +22,7 @@ import seaborn as sns
 import mpld3
 from mpld3 import plugins
 import urllib.parse
+import matplotlib.dates as mdates
 
 app = Flask(__name__)
 
@@ -102,6 +103,7 @@ def calc_corr_sp500(df):
     sp500_df = pd.DataFrame(sp500_prices, columns=['date', 'sp500_close'])
     merged_df = pd.merge(df, sp500_df, on='date')
     corr = merged_df['return'].corr(merged_df['sp500_close'])
+    print(merged_df)
     return corr
 
 
@@ -120,6 +122,7 @@ def createMap(symbol):
     data = response.json()
     address = data['Address']
     encoded_address = urllib.parse.quote(address)
+    time.sleep(3)
     url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(
         encoded_address)
     response = requests.get(url).json()
@@ -133,17 +136,17 @@ def createMap(symbol):
     else:
         return "No infomation found"
 
-
 def stock_chart(df, start_date, end_date, stock_name):
-    # generate plot
     img = BytesIO()
-    # set the figure size to 12 inches (width) by 6 inches (height)
-    plt.figure(figsize=(13, 6))
-    plt.plot(df['date'], df['close'])
-    plt.title(f"{stock_name} Stock Price between {start_date} and {end_date}")
-    plt.xlabel('Date')
-    plt.ylabel('Closing Price ($)')
-    plt.xticks(df['date'])  # set x ticks to show every 10th date
+    fig, ax = plt.subplots(figsize=(13, 6))
+    ax.plot(df['date'], df['close'], color='blue', label='Closing Price')
+    ax.set_title(f"{stock_name} Stock Price between {start_date} and {end_date}")
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Closing Price ($)')
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())  # automatically adjust x-axis ticks
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # format x-axis tick labels
+    plt.xticks(rotation=45)  # rotate x-axis tick labels for better visibility
+    plt.tight_layout()  # adjust subplot layout for better spacing
     plt.savefig(img, format='png')
     plt.close()
     img.seek(0)
@@ -306,6 +309,7 @@ def stock_info():
         normality_test_result = normality_test(df)
         stationarity_test_result = stationarity_test(df)
         granger_causality_test_result = granger_causality_test(df)
+        granger_causality_test_result = json.dumps(granger_causality_test_result, indent=4)
 
         stock_plot = stock_chart(df, start_date, end_date, stock_name)
         autocorr_test_plot = autocorr_test(df)
