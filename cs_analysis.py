@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 
 # Step 1: Collect real-world data using a Web API
 api_key = 'HN5ZKE3677Q1PMJM'
-symbol = 'CS'
+symbol = 'APPL'
 url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&apikey={api_key}'
 response = requests.get(url)
-data = json.loads(response.text)
+#data = json.loads(response.text)
+data = response.json()
+
+print(data)
 
 # Step 2: Data preparation
 prices = []

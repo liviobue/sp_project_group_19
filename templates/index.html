@@ -41,10 +41,21 @@
         function validateDates() {
             var startDate = new Date(document.getElementById("start_date").value);
             var endDate = new Date(document.getElementById("end_date").value);
+            // Calculate the difference in milliseconds between the start and end dates
+            var timeDifference = Math.abs(endDate - startDate);
+            // Convert the difference to days
+            var daysDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+            // Check if the number of days is less than 20
+            if (daysDifference < 20) {
+                alert("There must be at least 20 days between the start and end dates.");
+                return false;
+            }
+
             if (startDate > endDate) {
                 alert("End date must be after start date.");
                 return false;
             }
+
             return true;
         }
     </script>

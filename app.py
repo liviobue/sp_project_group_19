@@ -45,6 +45,11 @@ def get_stock_data(symbol):
     # Step 2: Retrieve data from API and convert to DataFrame
     response = requests.get(url)
     data = json.loads(response.text)
+
+    if 'Time Series (Daily)' not in data:
+        print("Error: Time Series (Daily) data not found")
+        return
+
     # Connect to the database
     engine = create_engine(db_connection, echo=True)
     connection = engine.connect()
@@ -76,6 +81,7 @@ def get_stock_data(symbol):
     # Commit changes
     connection.commit()
     print("Successfully inserted data")
+
 
 
 def get_stock_data_for_page(start_date, end_date, symbol):
@@ -293,6 +299,26 @@ def create_subplot(stock_plot, autocorr_test_plot, moving_average_chart_plot, he
     # encode the plot as a base64 string and return it
     return mpld3.fig_to_html(fig)
 
+
+def get_stock_info(stock_symbol):
+    stock = yf.Ticker(stock_symbol)
+    info = stock.info
+    info_dict = {
+        'Name': info.get('shortName', ''),
+        'Sector': info.get('sector', ''),
+        'Market Cap': info.get('marketCap', ''),
+        'PE Ratio': info.get('trailingPE', ''),
+        'Current Price': info.get('regularMarketPrice', '')
+    }
+    return info_dict
+
+def generate_stock_info_html(stock_info):
+    html = ''
+    for key, value in stock_info.items():
+        html += f"<p>{key}: {value}</p>"
+    return html
+
+
 # Step 5: Flask app
 
 
@@ -331,12 +357,15 @@ def stock_info():
         plots = create_subplot(
             stock_plot, autocorr_test_plot, moving_average_chart_plot, heatmap_plot)
 
+        info_dict = get_stock_info(symbol)
+        stock_info_html = generate_stock_info_html(info_dict)
+
         # Create PDF
         pdf_data = export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
                               granger_causality_test_result, stationarity_test_result, normality_test_result)
         pdf_data_base64 = base64.b64encode(pdf_data).decode('utf-8')
         # render template
-        return render_template('stock_info.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result, stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result, pdf_data=pdf_data_base64)
+        return render_template('stock_info.html', stock_info_html=stock_info_html, plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result, stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result, pdf_data=pdf_data_base64)
     except Exception as e:
         resp = make_response(render_template(
             'error.html', symbol=symbol, error=str(e)))

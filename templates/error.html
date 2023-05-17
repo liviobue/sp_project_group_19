@@ -9,8 +9,8 @@
 <body>
     <div class="container">
         <h1 class="mt-5">Error</h1>
-        <p class="lead">Sorry, {{ symbol }} is not a valid stock ticker.</p>
-        <p class="lead">Please check that you entered a valid stock symbol.</p>
+        <p class="lead">Sorry, there was an error with you {{ symbol }}. Please check the error message below!</p>
+        <p class="lead">Please note that some tests must have a minimum number of data points</p>
         <p><a href="/" class="btn btn-primary">Return to Home Page</a></p>
         {% if error %}
         <p>Error message: {{ error }}</p>
