@@ -22,6 +22,8 @@ import seaborn as sns
 import mpld3
 from mpld3 import plugins
 import urllib.parse
+import time
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -89,20 +91,30 @@ def get_stock_data_for_page(start_date, end_date, symbol):
     return (df)
 
 
-def calc_corr_sp500(df):
-    # Step 4: Calculate correlation with S&P 500
+def calc_corr_sp500(df, start_date, end_date):
     sp500_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&apikey={api_key}'
+
+    #Get S&P 500 Values
     sp500_response = requests.get(sp500_url)
     sp500_data = json.loads(sp500_response.text)
-    time.sleep(3)
-    sp500_prices = []
+
+    # Initialize list for closing values
+    sp500_closing_values = []
+
+    # Loop over S&P 500 values
     for date, values in sp500_data['Time Series (Daily)'].items():
-        sp500_prices.append([date, float(values['4. close'])])
-    sp500_prices.reverse()
-    sp500_df = pd.DataFrame(sp500_prices, columns=['date', 'sp500_close'])
-    merged_df = pd.merge(df, sp500_df, on='date')
-    corr = merged_df['return'].corr(merged_df['sp500_close'])
-    return corr
+        closing_value = float(values['4. close'])
+        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        sp500_closing_values.append({'date': date_obj, 'sp500_close': closing_value})
+
+    # Create Dataframe and fill with closing values
+    sp500_df = pd.DataFrame(sp500_closing_values)
+
+    # Convert closing values from df to numeric datatype
+    df['close'] = pd.to_numeric(df['close'])
+
+    correlation = sp500_df['sp500_close'].corr(df['close'])
+    return round(correlation, 4)
 
 
 def get_stock_name(symbol):
@@ -301,7 +313,7 @@ def stock_info():
                 'error.html', symbol=symbol, error="No stock information for this time period"))
             resp.cache_control.no_cache = True
             return resp
-        corr = calc_corr_sp500(df)
+        corr = calc_corr_sp500(df, start_date, end_date)
         map_html = createMap(symbol)
         normality_test_result = normality_test(df)
         stationarity_test_result = stationarity_test(df)
