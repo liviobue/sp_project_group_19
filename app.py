@@ -21,6 +21,7 @@ from statsmodels.graphics.tsaplots import plot_acf
 import seaborn as sns
 import mpld3
 from mpld3 import plugins
+import urllib.parse
 
 app = Flask(__name__)
 
@@ -118,8 +119,9 @@ def createMap(symbol):
     response = requests.get(url)
     data = response.json()
     address = data['Address']
+    encoded_address = urllib.parse.quote(address)
     url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(
-        address)
+        encoded_address)
     response = requests.get(url).json()
     if response:
         lat = response[0]["lat"]
