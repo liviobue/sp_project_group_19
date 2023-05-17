@@ -151,7 +151,7 @@ def createMap(symbol):
 def stock_chart(df, start_date, end_date, stock_name):
     img = BytesIO()
     fig, ax = plt.subplots(figsize=(13, 6))
-    ax.plot(df['date'], df['close'], color='blue', label='Closing Price')
+    ax.plot(df['date'], df['close'])
     ax.set_title(f"{stock_name} Stock Price between {start_date} and {end_date}")
     ax.set_xlabel('Date')
     ax.set_ylabel('Closing Price ($)')
