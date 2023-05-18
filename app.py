@@ -28,7 +28,7 @@ import matplotlib.dates as mdates
 
 app = Flask(__name__)
 
-# Step 1: API key and endpoint
+# API key and endpoint
 api_key = 'HN5ZKE3677Q1PMJM'
 
 # Define connection
@@ -42,7 +42,7 @@ db_connection = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{d
 
 def get_stock_data(symbol):
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&apikey={api_key}'
-    # Step 2: Retrieve data from API and convert to DataFrame
+    # Retrieve data from API and convert to DataFrame
     response = requests.get(url)
     data = json.loads(response.text)
 
