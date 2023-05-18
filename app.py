@@ -71,17 +71,29 @@ def get_stock_data(symbol):
     connection.execute(create_table_query)
 
     # Insert data into MySQL database
+    retry_count = 3  # Number of retries
+
     for date, values in data['Time Series (Daily)'].items():
-        insert_query = text(f"""
-            INSERT INTO {table_name} (date, open, high, low, close, volume)
-            VALUES (:date, :open, :high, :low, :close, :volume)
-        """)
-        connection.execute(insert_query, {'date': date, 'open': values['1. open'], 'high': values['2. high'],
-                                          'low': values['3. low'], 'close': values['4. close'], 'volume': values['6. volume']})
+        retry = 0
+        while retry < retry_count:
+            try:
+                insert_query = text(f"""
+                    INSERT INTO {table_name} (date, open, high, low, close, volume)
+                    VALUES (:date, :open, :high, :low, :close, :volume)
+                """)
+                connection.execute(insert_query, {'date': date, 'open': values['1. open'], 'high': values['2. high'],
+                                                  'low': values['3. low'], 'close': values['4. close'], 'volume': values['6. volume']})
+                break  # Break out of the retry loop if the query is successful
+            except Exception as e:
+                print(
+                    f"Error occurred while executing insert query. Retrying ({retry+1}/{retry_count})...")
+                time.sleep(1)  # Wait for 1 second before retrying
+                retry += 1
+        if retry == retry_count:
+            print(f"Max retries reached. Insert query failed for date: {date}")
     # Commit changes
     connection.commit()
     print("Successfully inserted data")
-
 
 
 def get_stock_data_for_page(start_date, end_date, symbol):
@@ -102,23 +114,28 @@ def get_stock_data_for_page(start_date, end_date, symbol):
 def calc_corr_sp500(df, start_date, end_date):
     sp500_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&apikey={api_key}'
 
-    #Get S&P 500 Values
+    # Get S&P 500 Values
     sp500_response = requests.get(sp500_url)
     sp500_data = json.loads(sp500_response.text)
 
     # Initialize list for closing values
     sp500_closing_values = []
 
-    # Loop over S&P 500 values
-    for date, values in sp500_data['Time Series (Daily)'].items():
-        closing_value = float(values['4. close'])
-        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-        sp500_closing_values.append({'date': date_obj, 'sp500_close': closing_value})
+    # Convert start_date and end_date to datetime.date objects
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    # Create Dataframe and fill with closing values
+    # Loop over S&P 500 values within the specified date range
+    for date, values in sp500_data['Time Series (Daily)'].items():
+        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        if start_date <= date_obj <= end_date:
+            closing_value = float(values['4. close'])
+            sp500_closing_values.append({'date': date_obj, 'sp500_close': closing_value})
+
+    # Create DataFrame and fill with closing values
     sp500_df = pd.DataFrame(sp500_closing_values)
 
-    # Convert closing values from df to numeric datatype
+    # Convert closing values from DataFrame to numeric datatype
     df['close'] = pd.to_numeric(df['close'])
 
     correlation = sp500_df['sp500_close'].corr(df['close'])
@@ -138,9 +155,10 @@ def createMap(symbol):
     # Step 2: Retrieve data from API and get address
     response = requests.get(url)
     data = response.json()
+    if 'Address' not in data:
+        return "Error: Address data not found"
     address = data['Address']
     encoded_address = urllib.parse.quote(address)
-    time.sleep(3)
     url = "https://nominatim.openstreetmap.org/search?q={}&format=json".format(
         encoded_address)
     response = requests.get(url).json()
@@ -154,15 +172,19 @@ def createMap(symbol):
     else:
         return "No infomation found"
 
+
 def stock_chart(df, start_date, end_date, stock_name):
     img = BytesIO()
     fig, ax = plt.subplots(figsize=(13, 6))
     ax.plot(df['date'], df['close'])
-    ax.set_title(f"{stock_name} Stock Price between {start_date} and {end_date}")
+    ax.set_title(
+        f"{stock_name} Stock Price between {start_date} and {end_date}")
     ax.set_xlabel('Date')
     ax.set_ylabel('Closing Price ($)')
-    ax.xaxis.set_major_locator(mdates.AutoDateLocator())  # automatically adjust x-axis ticks
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # format x-axis tick labels
+    # automatically adjust x-axis ticks
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter(
+        '%Y-%m-%d'))  # format x-axis tick labels
     plt.xticks(rotation=45)  # rotate x-axis tick labels for better visibility
     plt.tight_layout()  # adjust subplot layout for better spacing
     plt.savefig(img, format='png')
@@ -173,7 +195,7 @@ def stock_chart(df, start_date, end_date, stock_name):
 
 
 def export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
-                              granger_causality_test_result, stationarity_test_result, normality_test_result):
+               granger_causality_test_result, stationarity_test_result, normality_test_result):
     # Get the rendered HTML
     rendered_html = render_template('stock_info.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result,
                                     stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, normality_test_result=normality_test_result)
@@ -303,18 +325,22 @@ def create_subplot(stock_plot, autocorr_test_plot, moving_average_chart_plot, he
 def get_stock_info(stock_symbol):
     stock = yf.Ticker(stock_symbol)
     info = stock.info
+    current_price = info.get('regularMarketPrice')
+    market_cap = info.get('marketCap', '')
+    formatted_market_cap = "{:,.0f}".format(
+        float(market_cap)) if market_cap else ''
     info_dict = {
         'Name': info.get('shortName', ''),
         'Sector': info.get('sector', ''),
-        'Market Cap': info.get('marketCap', ''),
-        'PE Ratio': info.get('trailingPE', ''),
-        'Current Price': info.get('regularMarketPrice', '')
+        'Market Cap': formatted_market_cap,
+        'PE Ratio': info.get('trailingPE', 'Not found')
     }
     return info_dict
 
-def generate_stock_info_html(stock_info):
+
+def generate_stock_info_html(info_dict):
     html = ''
-    for key, value in stock_info.items():
+    for key, value in info_dict.items():
         html += f"<p>{key}: {value}</p>"
     return html
 
@@ -347,7 +373,8 @@ def stock_info():
         normality_test_result = normality_test(df)
         stationarity_test_result = stationarity_test(df)
         granger_causality_test_result = granger_causality_test(df)
-        granger_causality_test_result = json.dumps(granger_causality_test_result, indent=4)
+        granger_causality_test_result = json.dumps(
+            granger_causality_test_result, indent=4)
 
         stock_plot = stock_chart(df, start_date, end_date, stock_name)
         autocorr_test_plot = autocorr_test(df)
