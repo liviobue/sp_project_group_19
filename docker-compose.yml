@@ -11,14 +11,14 @@ services:
     volumes:
       - db_data:/var/lib/mysql
   web:
-    build: .
+    image: python:3.10-slim-buster
     command: >
       bash -c "
         pip install --upgrade pip &&
         pip install -r /app/requirements.txt &&
         apt update -y &&
         apt install wkhtmltopdf -y &&
-        python app.py
+        python app/app.py
       "
     ports:
       - "8080:8080"
