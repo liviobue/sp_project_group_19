@@ -349,18 +349,6 @@ def generate_stock_info_html(info_dict):
         html += f"<p>{key}: {value}</p>"
     return html
 
-def get_stock_price(symbol):
-    url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
-    response = requests.get(url)
-    data = response.json()
-    stock_info = data.get('Global Quote')
-    if stock_info is not None:
-        stock_price = stock_info.get('05. price')
-        if stock_price is not None:
-            return jsonify(stock_price)
-
-    return jsonify("Not found")
-
 
 # Step 5: Flask app
 
@@ -405,8 +393,6 @@ def stock_info():
         info_dict = get_stock_info(symbol)
         stock_info_html = generate_stock_info_html(info_dict)
 
-        stock_price = get_stock_price(symbol)
-
         # Create PDF
         pdf_data = export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
                               granger_causality_test_result, stationarity_test_result, normality_test_result)
@@ -432,7 +418,7 @@ def stock_price():
             if stock_price is not None:
                 return jsonify(stock_price)
 
-    return jsonify("Not found")
+    return jsonify("Not found (Max 5 API Requests per Minute)")
 
 
 if __name__ == '__main__':

@@ -27,6 +27,14 @@
         .decrease {
             color: red;
         }
+
+        #stock-price {
+            transition: background-color 1s ease;
+        }
+
+        .updating {
+            background-color: yellow;
+        }
     </style>
 </head>
 
@@ -128,12 +136,16 @@
                     stockPriceElement.text(response);
 
                     // Check if the stock price increased or decreased
-                    if (response > prevStockPrice) {
-                        stockPriceElement.removeClass('decrease').addClass('increase');
-                    } else if (response < prevStockPrice) {
-                        stockPriceElement.removeClass('increase').addClass('decrease');
-                    } else if (response === prevStockPrice) {
-                        stockPriceElement.removeClass('increase').removeClass('decrease');
+                    if (prevStockPrice === '' || prevStockPrice === "Not found (Max 5 API Requests per Minute)") {
+                        stockPriceElement.removeClass('increase decrease');
+                    } else {
+                        if (response > prevStockPrice) {
+                            stockPriceElement.removeClass('decrease').addClass('increase');
+                        } else if (response < prevStockPrice) {
+                            stockPriceElement.removeClass('increase').addClass('decrease');
+                        } else if (response === prevStockPrice) {
+                            stockPriceElement.removeClass('increase decrease');
+                        }
                     }
                 }
             });
