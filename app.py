@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, make_response
+from flask import Flask, render_template, request, make_response, jsonify
 import pandas as pd
 import requests
 import json
@@ -25,6 +25,7 @@ import urllib.parse
 import time
 from datetime import datetime
 import matplotlib.dates as mdates
+import threading
 
 app = Flask(__name__)
 
@@ -118,6 +119,10 @@ def calc_corr_sp500(df, start_date, end_date):
     sp500_response = requests.get(sp500_url)
     sp500_data = json.loads(sp500_response.text)
 
+    if 'Time Series (Daily)' not in sp500_data:
+        print("Error: Time Series (Daily) data not found")
+        return
+
     # Initialize list for closing values
     sp500_closing_values = []
 
@@ -197,7 +202,7 @@ def stock_chart(df, start_date, end_date, stock_name):
 def export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
                granger_causality_test_result, stationarity_test_result, normality_test_result):
     # Get the rendered HTML
-    rendered_html = render_template('stock_info.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result,
+    rendered_html = render_template('pdf.html', plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result,
                                     stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, normality_test_result=normality_test_result)
 
     # Create PDF from rendered HTML
@@ -344,6 +349,18 @@ def generate_stock_info_html(info_dict):
         html += f"<p>{key}: {value}</p>"
     return html
 
+def get_stock_price(symbol):
+    url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
+    response = requests.get(url)
+    data = response.json()
+    stock_info = data.get('Global Quote')
+    if stock_info is not None:
+        stock_price = stock_info.get('05. price')
+        if stock_price is not None:
+            return jsonify(stock_price)
+
+    return jsonify("Not found")
+
 
 # Step 5: Flask app
 
@@ -356,6 +373,7 @@ def index():
 
 @app.route('/stock_info', methods=['POST'])
 def stock_info():
+    symbol = request.args.get('symbol')  # Get the value of the 'symbol' query parameter
     symbol = request.form['symbol'].upper()
     start_date = request.form.get('start_date')
     end_date = request.form.get('end_date')
@@ -387,17 +405,34 @@ def stock_info():
         info_dict = get_stock_info(symbol)
         stock_info_html = generate_stock_info_html(info_dict)
 
+        stock_price = get_stock_price(symbol)
+
         # Create PDF
         pdf_data = export_pdf(corr, plots, df, pd, stock_name, autocorr_test_plot,
                               granger_causality_test_result, stationarity_test_result, normality_test_result)
         pdf_data_base64 = base64.b64encode(pdf_data).decode('utf-8')
         # render template
-        return render_template('stock_info.html', stock_info_html=stock_info_html, plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result, stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result, pdf_data=pdf_data_base64)
+        return render_template('stock_info.html', symbol=symbol, stock_info_html=stock_info_html, plots=plots, autocorr_test_plot=autocorr_test_plot, granger_causality_test_result=granger_causality_test_result, stationarity_test_result=stationarity_test_result, corr=corr, table=df, pd=pd, stock_name=stock_name, map_html=map_html, normality_test_result=normality_test_result, pdf_data=pdf_data_base64)
     except Exception as e:
         resp = make_response(render_template(
             'error.html', symbol=symbol, error=str(e)))
         resp.cache_control.no_cache = True
         return resp
+
+@app.route('/stock_price', methods=['GET'])
+def stock_price():
+    symbol = request.args.get('symbol')  # Get the value of the 'symbol' query parameter
+    if symbol is not None:
+        url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
+        response = requests.get(url)
+        data = response.json()
+        stock_info = data.get('Global Quote')
+        if stock_info is not None:
+            stock_price = stock_info.get('05. price')
+            if stock_price is not None:
+                return jsonify(stock_price)
+
+    return jsonify("Not found")
 
 
 if __name__ == '__main__':

@@ -35,7 +35,7 @@
 
         <h4>General Information</h4>
 
-        <p>Stock Price: <span id="stock-price"></span></p>
+        <p>Stock Price: (Cannot be shown in PDF) /p>
 
         <p class="mb-3">{{ stock_info_html | safe }}</p>
 
@@ -99,33 +99,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
         integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
         crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-
-    <script>
-        // Function to fetch and update the stock price
-        function updateStockPrice() {
-            var symbol = '{{ symbol }}'; // Replace 'AAPL' with the desired stock symbol
-            $.ajax({
-                url: '/stock_price',
-                type: 'GET',
-                data: {symbol: symbol}, // Include the symbol parameter in the request
-                success: function(response) {
-                    $('#stock-price').text(response);
-                }
-            });
-        }
-    
-        // Function to refresh the stock price every 5 seconds
-        function refreshStockPrice() {
-            updateStockPrice();
-            setTimeout(refreshStockPrice, 5000);
-        }
-    
-        // Start the initial fetching of stock price and refreshing
-        updateStockPrice();
-        setTimeout(refreshStockPrice, 5000);
-    </script>
-    
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>    
 </body>
 
 </html>
