@@ -135,6 +135,8 @@
                     // Update the stock price value
                     stockPriceElement.text(response);
 
+                    stockPriceElement.addClass('updating');
+
                     // Check if the stock price increased or decreased
                     if (prevStockPrice === '' || prevStockPrice === "Not found (Max 5 API Requests per Minute)") {
                         stockPriceElement.removeClass('increase decrease');
@@ -147,11 +149,16 @@
                             stockPriceElement.removeClass('increase decrease');
                         }
                     }
+
+                    // Delay for 2 seconds (2000 milliseconds) before removing the 'updating' class
+                    setTimeout(function () {
+                        stockPriceElement.removeClass('updating');
+                    }, 2000);
                 }
             });
         }
 
-        // Function to refresh the stock price every 5 seconds
+        // Function to refresh the stock price every 30 seconds
         function refreshStockPrice() {
             updateStockPrice();
             setTimeout(refreshStockPrice, 30000);
@@ -161,6 +168,7 @@
         updateStockPrice();
         setTimeout(refreshStockPrice, 30000);
     </script>
+
 
 </body>
 

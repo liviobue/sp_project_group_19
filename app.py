@@ -48,7 +48,7 @@ def get_stock_data(symbol):
     data = json.loads(response.text)
 
     if 'Time Series (Daily)' not in data:
-        print("Error: Time Series (Daily) data not found")
+        print("Error: Time Series (Daily) data not found (Max 5 API Requests per Minute)")
         return
 
     # Connect to the database
@@ -120,7 +120,7 @@ def calc_corr_sp500(df, start_date, end_date):
     sp500_data = json.loads(sp500_response.text)
 
     if 'Time Series (Daily)' not in sp500_data:
-        print("Error: Time Series (Daily) data not found")
+        print("Error: Time Series (Daily) data not found (Max 5 API Requests per Minute)")
         return
 
     # Initialize list for closing values
