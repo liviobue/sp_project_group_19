@@ -118,12 +118,12 @@
         // Function to refresh the stock price every 5 seconds
         function refreshStockPrice() {
             updateStockPrice();
-            setTimeout(refreshStockPrice, 5000);
+            setTimeout(refreshStockPrice, 30000);
         }
     
         // Start the initial fetching of stock price and refreshing
         updateStockPrice();
-        setTimeout(refreshStockPrice, 5000);
+        setTimeout(refreshStockPrice, 30000);
     </script>
     
 </body>
