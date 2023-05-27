@@ -1,5 +1,5 @@
-# Scientific programming
+# Scientific programming
 
-To run the app please run 
+To run the app please run
 
-´´´docker compose up´´´
+```docker compose up```
