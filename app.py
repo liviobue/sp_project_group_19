@@ -112,6 +112,9 @@ def get_stock_data_for_page(start_date, end_date, symbol):
     return (df)
 
 
+import yfinance as yf
+import pandas as pd
+
 def calc_corr_sp500(df, start_date, end_date):
     sp500_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&apikey={api_key}'
 
@@ -139,6 +142,10 @@ def calc_corr_sp500(df, start_date, end_date):
 
     # Create DataFrame and fill with closing values
     sp500_df = pd.DataFrame(sp500_closing_values)
+
+    if df.empty:
+        print("Error: DataFrame is empty")
+        return
 
     # Convert closing values from DataFrame to numeric datatype
     df['close'] = pd.to_numeric(df['close'])
