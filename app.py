@@ -144,8 +144,7 @@ def calc_corr_sp500(df, start_date, end_date):
     sp500_df = pd.DataFrame(sp500_closing_values)
 
     if df.empty:
-        print("Error: DataFrame is empty")
-        return
+        return "Dates not found"
 
     # Convert closing values from DataFrame to numeric datatype
     df['close'] = pd.to_numeric(df['close'])
