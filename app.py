@@ -148,11 +148,12 @@ def calc_corr_sp500(df, start_date, end_date):
 
 
 def get_stock_name(symbol):
-    url = f"https://finance.yahoo.com/quote/{symbol}"
-    response = requests.get(url)
-    start = response.text.find('<title>') + len('<title>')
-    end = response.text.find('(', start)
-    return response.text[start:end].strip()
+    stock = yf.Ticker(symbol)
+    info = stock.info
+    if 'longName' in info:
+        return info['longName']
+    else:
+        return "Name not found"
 
 
 def createMap(symbol):
